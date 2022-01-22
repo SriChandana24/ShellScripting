@@ -18,3 +18,7 @@ echo EXPR1 OUTPUT = $EXPR1
 
 ## Trying to access a variable from shell command line
 echo Course Name = $COURSE_NAME
+
+a=100
+readonly a
+a=200 #should give error here as a is read only
