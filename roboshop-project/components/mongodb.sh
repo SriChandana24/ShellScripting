@@ -1,33 +1,40 @@
 source components/common.sh
 
-echo "Download MongoDb repo file"
-curl -s -o /etc/yum.repos.d/mongodb.repo https://raw.githubusercontent.com/roboshop-devops-project/mongodb/main/mongo.repo &>>$LOG_FILE
+echo "Installing NGINX"
+yum install nginx -y &>>$LOG_FILE
 STAT $?
 
-echo "Install MongoDB"
-yum install -y mongodb-org &>>$LOG_FILE
+echo "Download Frontend Content"
+curl -s -L -o /tmp/frontend.zip "https://github.com/roboshop-devops-project/frontend/archive/main.zip" &>>$LOG_FILE
 STAT $?
 
-echo "Update MongoDB Config file"
-sed -i -e 's/127.0.0.1/0.0.0.0/' /etc/mongod.conf  &>>$LOG_FILE
+echo "Clean Old Content"
+rm -rf /usr/share/nginx/html/*  &>>$LOG_FILE
 STAT $?
 
-echo "Start Database"
-systemctl enable mongod  &>>$LOG_FILE
-systemctl start mongod &>>$LOG_FILE
+echo "Extract Frontend Content"
+cd /tmp
+unzip -o frontend.zip &>>$LOG_FILE
 STAT $?
 
-echo "Download Schema"
-curl -s -L -o /tmp/mongodb.zip "https://github.com/roboshop-devops-project/mongodb/archive/main.zip"  &>>$LOG_FILE
+echo "Copy Extracted Content to Nginx Path"
+cp -r frontend-main/static/* /usr/share/nginx/html/ &>>$LOG_FILE
 STAT $?
 
-echo "Extract Schema"
-cd /tmp/
-unzip -o mongodb.zip  &>>$LOG_FILE
+echo "Copy Nginx RoboShop Config"
+cp frontend-main/localhost.conf /etc/nginx/default.d/roboshop.conf &>>$LOG_FILE
 STAT $?
 
-echo "Load Schema"
-cd mongodb-main
-mongo < catalogue.js &>>$LOG_FILE
-mongo < users.js  &>>$LOG_FILE
+echo "Update RoboShop Config"
+sed -i -e "/catalogue/ s/localhost/catalogue.roboshop.internal/" -e '/user/ s/localhost/user.roboshop.internal/' -e '/cart/ s/localhost/cart.roboshop.internal/' -e '/shipping/ s/localhost/shipping.roboshop.internal/' -e '/payment/ s/localhost/payment.roboshop.internal/' /etc/nginx/default.d/roboshop.conf
 STAT $?
+
+echo "Start Nginx Service"
+systemctl enable nginx &>>$LOG_FILE
+systemctl restart nginx  &>>$LOG_FILE
+STAT $?
+
+
+
+
+
